@@ -1,119 +1,88 @@
 #include <iostream>
 using namespace std;
 
-int cost[10];
-int head[10];
-int to[20];
-int next_node[20];
-int edge_cnt;
+int left_child[10005];
+int right_child[10005];
 
-bool has_bulb[10];
+// 所有平衡子树中最大的节点数量
+int max_ans = 0;
 
-// 记录最小花费，初始设为一个极大的数
-int min_ans = 10000000;
-int n;
-
-// 添加双向连接
-void add_edge(int u, int v)
+// 求绝对值
+int my_abs(int a)
 {
-    edge_cnt++;
-    to[edge_cnt] = v;
-    next_node[edge_cnt] = head[u];
-    head[u] = edge_cnt;
-
-    edge_cnt++;
-    to[edge_cnt] = u;
-    next_node[edge_cnt] = head[v];
-    head[v] = edge_cnt;
+    if (a < 0)
+        return -a;
+    return a;
 }
 
-// 检查是否所有房间都被照亮
-bool check_all_lit()
+// 求最大值
+int my_max(int a, int b)
 {
-    for (int i = 1; i <= n; i++)
+    if (a > b)
     {
-        bool lit = false;
-        if (has_bulb[i] == true)
-        { // 如果自己装了灯泡，那就亮了
-            lit = true;
-        }
-        else
-        {
-            // 如果自己没装，去看看相连的邻居有没有装
-            for (int e = head[i]; e != 0; e = next_node[e])
-            {
-                int neighbor = to[e];
-                if (has_bulb[neighbor] == true)
-                {
-                    lit = true;
-                    break;
-                }
-            }
-        }
-
-        if (lit == false)
-        { // 只要有一个没亮，就返回失败
-            return false;
-        }
+        return a;
     }
-    return true;
+    return b;
 }
 
-// 递归遍历所有的装灯泡组合
-void dfs_search(int room_idx, int current_cost)
+// 递归遍历，用引用传递
+void dfs(int u, int &height, int &size, bool &is_bal)
 {
-    if (current_cost >= min_ans)
-    { // 剪枝：如果当前花费已经超过最小值，不用继续算了
+    if (u == 0)
+    { // 到最后的节点时，开始返回，叶子结点是平衡的，给一个初始化
+        height = 0;
+        size = 0;
+        is_bal = true;
         return;
     }
 
-    if (room_idx > n)
-    { // 所有的房间都决定完了，开始检查
-        if (check_all_lit() == true)
+    // 左孩子
+    int left_h;
+    int left_s;
+    bool left_b;
+    dfs(left_child[u], left_h, left_s, left_b);
+
+    // 右孩子
+    int right_h;
+    int right_s;
+    bool right_b;
+    dfs(right_child[u], right_h, right_s, right_b);
+
+    // 更新当前节点的高度和大小
+    height = my_max(left_h, right_h) + 1;
+    size = left_s + right_s + 1;
+
+    // 判断当前节点这棵树是否是平衡二叉树：左右子树平衡，他们的高度差不超过1
+    if (left_b == true && right_b == true && my_abs(left_h - right_h) <= 1)
+    {
+        is_bal = true;
+
+        // 如果当前是平衡树，更新最大值
+        if (size > max_ans)
         {
-            // 如果所有房间都亮了，更新最小花费
-            if (current_cost < min_ans)
-            {
-                min_ans = current_cost;
-            }
+            max_ans = size;
         }
-        return;
     }
-
-    // 选择一：这个房间不装灯泡
-    has_bulb[room_idx] = false;
-    dfs_search(room_idx + 1, current_cost);
-
-    // 选择二：这个房间装灯泡
-    has_bulb[room_idx] = true;
-    dfs_search(room_idx + 1, current_cost + cost[room_idx]);
-
-    // 恢复现场（回溯）
-    has_bulb[room_idx] = false;
+    else
+    { // 如果不是，就改flag
+        is_bal = false;
+    }
 }
 
 int main()
 {
+    int n;
     cin >> n;
-    for (int k = 1; k <= n; ++k)
-    { // 读取每个节点和它的花费、子节点
-        int u;
-        int c;
-        int m;
-        cin >> u >> c >> m;
-        cost[u] = c;
-        for (int i = 0; i <= m; ++i)
-        {
-            int v;
-            cin >> v;
-            add_edge(u, v); // 建立双向连接
-        }
+    for (int i = 1; i <= n; ++i)//注意从1开始，方便找到相应的左右孩子
+    { // 编号为i的节点，输进来左右孩子的编号
+        cin >> left_child[i] >> right_child[i];
     }
-
-    // 从1号房间开始做决定，初始花费为0
-    dfs_search(1, 0);
-
-    cout << min_ans << endl;
+    // 根节点初始化
+    int root_height = 0;
+    int root_size = 0;
+    bool root_is_bal = true;
+    dfs(1, root_height, root_size, root_is_bal); // 从1编号开始递归
+    cout << max_ans << endl;
 
     return 0;
 }
